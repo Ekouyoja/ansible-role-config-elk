@@ -3,7 +3,7 @@
   copy:
     src: defaults/collect/{{ item }}
     dest: /etc/logstash/instances/01-collect/conf.d/{{ item }}
-  loop:
+  with_items:
     - "input-01-external.conf"
     - "output.conf"
     
@@ -11,7 +11,7 @@
   copy:
     src: defaults/analyse/{{ item }}
     dest: /etc/logstash/instances/02-analyse/conf.d/{{ item }}
-  loop:
+  with_items:
     - "input-01-internal.conf"
     - "output.conf"
     - "filter-02-pre-syslog.conf"
@@ -21,13 +21,13 @@
   copy:
     src: defaults/class/{{ item }}
     dest: /etc/logstash/instances/03-class/conf.d/{{ item }}
-  loop:
+  with_items:
     - "input-01-internal.conf"
     - "output.conf"
     
 - name: "Restart des différentes instances"
   systemd: name={{ item }} state=restarted
-  loop:
+  with_items:
     - "logstash-collect"
     - "logstash-analyse"
     - "logstash-class"
