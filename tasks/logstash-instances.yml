@@ -1,29 +1,3 @@
-- name: "On copie les fichiers d'instance collect"
-  copy:
-    src: defaults/01-collect/{{ item }}
-    dest: /etc/logstash/instances/01-collect/conf.d/{{ item }}
-  with_items:
-    - "input-01-external.conf"
-    - "output.conf"
-    
-- name: "On copie les fichiers d'instance analyse"
-  copy:
-    src: defaults/02-analyse/{{ item }}
-    dest: /etc/logstash/instances/02-analyse/conf.d/{{ item }}
-  with_items:
-    - "input-01-internal.conf"
-    - "output.conf"
-    - "filter-02-pre-syslog.conf"
-    - "filter-03-syslog.conf"
-
-- name: "On copie les fichiers d'instance class"
-  copy:
-    src: defaults/03-class/{{ item }}
-    dest: /etc/logstash/instances/03-class/conf.d/{{ item }}
-  with_items:
-    - "input-01-internal.conf"
-    - "output.conf"
-    
 - name: "Restart des différentes instances"
   systemd: name={{ item }} state=restarted
   with_items:
