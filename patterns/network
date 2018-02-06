@@ -1,0 +1,7 @@
+#########################
+## Equipements réseaux ##
+#########################
+
+NETDOT_PROCESS netdot
+NETDOTLOGLINE %{NETDOT_PROCESS:[process][name]}: %{LOGLEVEL:[netdot][severity]} - %{GREEDYDATA:[netdot][message]}
+

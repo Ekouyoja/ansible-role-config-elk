@@ -1,0 +1,6 @@
+############
+## Kernel ##
+############
+
+KERNEL_PROCESS kernel
+KERNEL %{KERNEL_PROCESS:[process][name]}: %{GREEDYDATA:[kernel][message]}

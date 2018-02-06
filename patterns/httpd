@@ -1,0 +1,69 @@
+#############################
+## Apache HTTPd et dérivés ##
+#############################
+
+# Exemples :
+# - modjk
+#   [Tue Dec 04 05:58:53 2012][20212:3999490816] [debug] ws_write::mod_jk.c (487): written 38 out of 38
+#   [Tue Dec 18 15:09:42 2012]JkStatus 10.0.0.1 0.000141
+# - error :
+#   [Wed Dec 05 14:18:56 2012] [error] [client 10.0.0.2] client denied by server configuration: /var/www/html/favicon.ico
+#   [error] [client 10.0.0.2] File does not exist: /var/www/html/favicon.ico
+#   [error] python_init: Python executable found '/usr/bin/python'
+
+# Configuration utilisées :
+#
+# ModJK :
+# JkLogStampFormat "[%a %b %d %H:%M:%S %Y]"
+# JkRequestLogFormat "%w %V %T"
+# %b    Bytes sent, excluding HTTP headers (CLF format)
+# %B    Bytes sent, excluding HTTP headers
+# %H    The request protocol
+# %m    The request method
+# %p    The canonical Port of the server serving the request
+# %q    The query string (prepended with a ? if a query string exists, otherwise an empty string)
+# %r    First line of request
+# %s    Request HTTP status code
+# %T    Request duration, elapsed time to handle request in seconds '.' micro seconds
+# %U    The URL path requested, not including any query string.
+# %v    The canonical ServerName of the server serving the request
+# %V    The server name according to the UseCanonicalName setting
+# %w    Tomcat worker name
+#
+# HTTPd :
+# LogFormat "%h %l %u %t \"%r\" %>s %b"
+# LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+# LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" T:%T %V %A %h %D" (ancien format étendu)
+# Logformat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %D %V %A \"%{X-Forwarded-For}i\"" (nouveau format étendu)
+# LogFormat "%t %h %{SSL_PROTOCOL}x %{SSL_CIPHER}x \"%r\" %b"
+# %h             Remote host
+# %l             Remote logname
+# %u             Remote user
+# %t             Time the request was received
+# %r             First line of request
+# %s             Status
+# %b             Size of response in bytes
+# %{Referer}i    The contents of Referer: header line(s)
+# %{User-Agent}i The contents of User-Agent: header line(s)
+# %T             The time taken to serve the request, in seconds
+# %V             The server name according to the UseCanonicalName setting
+# %A             Local IP-address
+# %D             The time taken to serve the request, in microseconds
+
+APACHE_ERRORLOG_DATE %{DAY} %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+APACHE_ERROR20 \[%{LOGLEVEL:[apache][severity]}\] (\[client %{IPORHOST:[apache][remote][ip]}:%{POSINT:[apache][remote][port]}\]) (?:%{APACHE_PHP}|%{GREEDYDATA:[apache][message]})
+APACHE_ERROR24 \[%{WORD:[apache][module]}:%{LOGLEVEL:[apache][severity]}\] \[pid %{POSINT:[apache][pid]}\] (\[client %{IPORHOST:[apache][remote][ip]}:%{POSINT:[apache][remote][port]}\]) (?:%{APACHE_PHP}|%{GREEDYDATA:[apache][message]})
+APACHE_PHP PHP?: %{LOGLEVEL:[php][severity]}(?::|,) %{GREEDYDATA:[php][message]}
+APACHE_FORMAT_ERRORLOG (?:\[%{APACHE_ERRORLOG_DATE:[apache][date]}\]) (?:%{APACHE_MODJK}|%{APACHE_ERROR20}|%{APACHE_ERROR24})
+
+APACHE_MODJK %{APACHE_MODJK_FORMAT1}|%{APACHE_MODJK_FORMAT2}|%{APACHE_ERROR20}|%{APACHE_ERROR24}
+APACHE_MODJK_FORMAT1 %{NOTSPACE:[apache][message]} (?:%{HOSTNAME:[apache][server][cname]}|%{IP}) %{NUMBER:[apache][duration_s]:float}
+APACHE_MODJK_FORMAT2 [ ](?:\[%{UINT}:%{UINT}\])? (?:\[%{LOGLEVEL:[apache][severity]}\])? %{GREEDYDATA:[apache][message]}
+
+APACHE_AUTH [a-zA-Z0-9_@.-]+
+APACHE_HTTPVERSION HTTP/(?:(?:1\.(?:0|1))|2)
+APACHE_METHOD GET|P(?:UT|OST|ATCH|ROPFIND)|HEAD|DELETE|TRACE|CONNECT|OPTIONS
+APACHE_FORWARDED  %{IP}(?:, %{IP})*
+APACHE_FORMAT_EXTENDED (?:%{IPORHOST:[apache][remote][ip]}) (?:-|%{USER:[apache][remote][ident]}) (?:-|%{APACHE_AUTH:[apache][remote][user]}) \[%{HTTPDATE:[apache][date]}\] "(?:-|%{APACHE_METHOD:[apache][method]} %{NOTSPACE:[apache][request]} (?:%{APACHE_HTTPVERSION:[apache][httpversion]}))" (?:%{NUMBER:[apache][response]}) (?:-|%{NUMBER:[apache][bytes]}) (?:-|%{QS:[apache][referer]}) (?:-|%{QS:[apache][useragent]})(?: %{UINT:[apache][duration]:int})(?: %{IPORHOST:[apache][server][cname]} %{IP:[apache][server][ip]} "(?:-|%{APACHE_FORWARDED:[apache][forwarded_host_raw]})")?(?: %{GREEDYDATA:[apache][message]})?
+APACHE_PROCESS httpd
+APACHE %{APACHE_PROCESS:[process][name]}(?:-%{USER:[apache][logsrvname]})? (?:%{APACHE_FORMAT_EXTENDED}|%{APACHE_FORMAT_ERRORLOG})

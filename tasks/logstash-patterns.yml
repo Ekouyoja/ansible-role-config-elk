@@ -1,0 +1,13 @@
+---
+- name: "Creation du dossier pattern"
+  file:
+    path: /etc/logstash/patterns
+    state: directory
+    mode: 0775
+    
+- name: "On copie les fichiers patterns"
+  copy:
+    src: "{{ item.src }}"
+    dest: /etc/logstash/patterns/{{ item.path }}
+  with_filetree: defaults/patterns/
+  when: item.state == 'file'

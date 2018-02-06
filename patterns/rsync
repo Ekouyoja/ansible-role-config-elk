@@ -1,0 +1,6 @@
+###########
+## Rsync ##
+###########
+
+RSYNC_PROCESS rsync
+RSYNC %{RSYNC_PROCESS:[process][name]}%{POSIX_PID}: %{GREEDYDATA:[rsync][message]}

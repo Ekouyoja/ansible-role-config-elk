@@ -1,0 +1,19 @@
+#####################
+## Cron et dérivés ##
+#####################
+
+# Exemples :
+# (root) CMD (run-parts /etc/cron.hourly)
+# (root) MAIL (mailed 121 bytes of output but got status 0x0001 )
+# (root) RELOAD (cron/root)
+# USER root pid 10780 cmd /usr/sbin/ntpclient -c 1 -s -h 127.2.0.2 >/dev/null 2>&1
+
+CRON_USER \(%{USER:[cron][user]}\)[ ]
+CRON_CMD (?:CMD \(%{GREEDYDATA:[cron][command]}\)| USER %{USER:[cron][user]} pid %{UINT:[cron][pid]:int} cmd %{GREEDYDATA:[cron][command]})
+CRON_MAIL MAIL \(%{GREEDYDATA:[cron][mail]}\)
+CRON_RELOAD \(%{GREEDYDATA:[cron][reload]}\)
+CRON_PROCESS crond|CROND
+CRON %{CRON_PROCESS:[process][name]}%{POSIX_PID}: (?:%{CRON_USER}(?:%{CRON_CMD}|%{CRON_MAIL}|%{CRON_RELOAD})|%{PAM})
+
+ATD_PROCESS atd
+ATD %{ATD_PROCESS:[process][name]}\(%{PAM_FILE:[pam][module]}\)%{POSIX_PID}: %{PAM_LOGLINE:[pam][message]}

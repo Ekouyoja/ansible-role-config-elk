@@ -1,0 +1,92 @@
+##################################################
+## Démons Postfix / Sendmail / Analyse de mails ##
+##################################################
+
+POSTFIX_VALUE [^>]*
+POSTFIX_NO_AROBASE [^@]+
+POSTFIX_PROTO (?:E?SMTP|LMTP)(?:A|SA?)?|UTF8(?:SMTP|LMTP)(?:A|SA?)?
+POSTFIX_QUEUEID (?:[A-F0-9]+|NOQUEUE)
+POSTFIX_MESSAGEID (?:%{UINT:[postfix][message_id][timestamp]:int}\.%{POSTFIX_QUEUEID:[postfix][message_id][queue_id]}|%{UUID:[postfix][message_id][uuid]|%{POSTFIX_NO_AROBASE:[postfix][message_id][unformatted_id]})@%{HOSTNAME:[postfix][message_id][domain]}|%{POSTFIX_VALUE}
+POSTFIX_EMAIL_ADDRESS_PART [a-zA-Z][a-zA-Z0-9_.+-=:]+
+POSTFIX_EMAIL_ADDRESS (?:%{POSTFIX_EMAIL_ADDRESS_PART})?(?:@%{HOSTNAME})?
+POSTFIX_EMAIL_ADDRESS_TO (?:%{POSTFIX_EMAIL_ADDRESS_PART:[postfix][to][short_name]})?(?:@%{HOSTNAME:[postfix][to][domain]})?
+POSTFIX_EMAIL_ADDRESS_FROM (?:%{POSTFIX_EMAIL_ADDRESS_PART:[postfix][from][short_name]})?(?:@%{HOSTNAME:[postfix][from][domain]})?
+POSTFIX_CLIENT (?:%{HOSTNAME:[postfix][client][host]}(?:\[%{IP:[postfix][client][ip]}\](?::%{UINT:[postfix][client][port]:int})?)?)
+POSTFIX_RELAY (?:%{HOSTNAME:[postfix][relay][host]}(?:\[%{IP:[postfix][relay][ip]}\](?::%{UINT:[postfix][relay][port]:int})?)?)
+POSTFIX_DELAYS %{POSREAL:[postfix][delays][a]:float}/%{POSREAL:[postfix][delays][b]:float}/%{POSREAL:[postfix][delays][c]:float}/%{POSREAL:[postfix][delays][d]:float}
+POSTFIX_DSN %{UINT}\.%{UINT}\.%{UINT}
+POSTFIX_STATUS [Ss]ent|[Dd]eferred|[Bb]ounced|[Ee]xpired
+POSTFIX_PERM_ERROR 5[0-9]{2}
+#TODO : non utilisé
+#POSTFIX_MESSAGE_LEVEL reject|warning|error|fatal|panic
+POSTFIX_MESSAGE %{POSTFIX_QUEUEID:[postfix][queue_id]}: %{GREEDYDATA:[postfix][reason]}
+POSTFIX_ACTION discard|dunno|filter|hold|ignore|info|prepend|redirect|replace|reject|warn
+POSTFIX_COMMAND RCPT|RSET|END-OF-MESSAGE|RCPT TO|AUTH|EHLO|DATA
+POSTFIX_SMTP_RESPONSE_CODE \d{3}
+POSTFIX_SMTP_RESPONSE_CODE_ENHANCED \d\.\d\.\d
+POSTFIX_SMTP_RESPONSE %{POSTFIX_SMTP_RESPONSE_CODE:[postfix][response_code]:int} %{POSTFIX_SMTP_RESPONSE_CODE_ENHANCED:[postfix][response_code_enhanced]}(?: <%{DATA:[postfix][response_data]}>:)?
+
+## Sous-processus
+# postfix/smtpd
+POSTFIX_SMTPD_CONNECTS (?:dis)?connect from %{POSTFIX_CLIENT}
+POSTFIX_SMTPD_ACTIONS %{POSTFIX_QUEUEID:[postfix][queue_id]}: %{POSTFIX_ACTION:[postfix][action]}: %{POSTFIX_COMMAND:[postfix][command]} from %{POSTFIX_CLIENT}: %{POSTFIX_SMTP_RESPONSE} %{DATA:[postfix][reason]}; from=<%{POSTFIX_EMAIL_ADDRESS_FROM:[postfix][from][name]}> to=<%{POSTFIX_EMAIL_ADDRESS_TO:[postfix][to][name]}> proto=%{POSTFIX_PROTO:[postfix][proto]} helo=<%{IPORHOST}>
+POSTFIX_SMTPD_LOGIN %{POSTFIX_QUEUEID:[postfix][queue_id]}: client=%{POSTFIX_CLIENT}(?:, sasl_method=%{DATA:[postfix][sasl_method]}, sasl_username=%{POSTFIX_EMAIL_ADDRESS:[postfix][sasl_username]})?
+POSTFIX_SMTPD_ERRORAFTERCOMMAND %{GREEDYDATA:[postfix][reason]} after %{POSTFIX_COMMAND:[postfix][command]} from %{POSTFIX_CLIENT}
+POSTFIX_SMTPD_ERRORINCOMMAND %{GREEDYDATA:[postfix][reason]} from %{POSTFIX_CLIENT} in %{POSTFIX_COMMAND:[postfix][command]} command: <%{POSTFIX_VALUE:[postfix][to][name]}>
+# postfix/smtp
+# postfix/local
+POSTFIX_OUT_RELAY %{POSTFIX_QUEUEID:[postfix][queue_id]}: to=(?:<?%{POSTFIX_EMAIL_ADDRESS_TO:[postfix][to][name]}>?)?,(?:\sorig_to=(?:<?%{POSTFIX_EMAIL_ADDRESS:[postfix][orig_to]}>?)?,)? relay=%{POSTFIX_RELAY}(?:, conn_use=%{UINT:[postfix][conn_use]:int})?, delay=%{POSREAL:[postfix][delays][total]:float}(?:, delays=%{POSTFIX_DELAYS})?(?:, dsn=%{POSTFIX_DSN:[postfix][dsn]})?, status=%{POSTFIX_STATUS:[postfix][status]} \(%{GREEDYDATA:[postfix][reason]}\)
+POSTFIX_OUT_CONNECT connect to %{POSTFIX_RELAY}: %{GREEDYDATA:[postfix][reason]}
+POSTFIX_OUT_5XX %{POSTFIX_QUEUEID:[postfix][queue_id]}: to=(?:<?%{POSTFIX_EMAIL_ADDRESS_TO:[postfix][to][name]}>?)?,(?:\sorig_to=(?:<?%{POSTFIX_EMAIL_ADDRESS:[postfix][orig_to]}>?)?,)? relay=%{POSTFIX_RELAY}, delay=%{POSREAL:[postfix][delays][total]:float}(?:, delays=%{POSTFIX_DELAYS})?(?:, dsn=%{POSTFIX_DSN:[postfix][dsn]})?, status=%{POSTFIX_STATUS:[postfix][result]} \(host %{HOSTNAME}\[%{IP}\] said: %{POSTFIX_PERM_ERROR:[postfix][responsecode]:int} %{POSTFIX_SMTP_RESPONSE} \(in reply to %{POSTFIX_COMMAND:[postfix][command]} command\)\)
+POSTFIX_OUT_REFUSAL %{POSTFIX_QUEUEID:[postfix][queue_id]}: host %{POSTFIX_RELAY} refused to talk to me: %{GREEDYDATA:[postfix][reason]}
+POSTFIX_OUT_LOSTCONNECTION %{POSTFIX_QUEUEID:[postfix][queue_id]}: lost connection with %{POSTFIX_RELAY} while %{GREEDYDATA:[postfix][reason]}
+POSTFIX_OUT_TIMEOUT %{POSTFIX_QUEUEID:[postfix][queue_id]}: conversation with %{POSTFIX_RELAY} timed out while %{GREEDYDATA:[postfix][reason]}
+POSTFIX_OUT_SAID %{POSTFIX_QUEUEID:[postfix][queue_id]}: host %{HOSTNAME}\[%{IP}\] said: %{POSTFIX_SMTP_RESPONSE} %{GREEDYDATA:[postfix][reason]} \(in reply to %{POSTFIX_COMMAND:[postfix][command]} command\)
+# postfix/qmgr
+POSTFIX_QMGR_REMOVED removed
+POSTFIX_LOGLINE_QMGR %{POSTFIX_SUBPROCESS_QMGR:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?%{POSTFIX_QUEUEID:[postfix][queue_id]}: (?:%{POSTFIX_QMGR_REMOVED:[postfix][queue_status]}|from=<(?:%{POSTFIX_VALUE:[postfix][from][name]})?>(?:(?:, status=%{POSTFIX_STATUS:[postfix][queue_status]}, returned to sender)|(?:, size=%{UINT:[postfix][size]:int}, nrcpt=%{UINT:[postfix][nrcpt]:int} \(queue %{GREEDYDATA:[postfix][queue_status]}\))?))
+# postfix/cleanup
+POSTFIX_LOGLINE_CLEANUP %{POSTFIX_SUBPROCESS_CLEANUP:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?(?:%{POSTFIX_QUEUEID:[postfix][queue_id]}: (?:message-id=<%{POSTFIX_MESSAGEID:[postfix][message_id][full]}>|%{GREEDYDATA:[postfix][reason]}))|%{POSTFIX_MESSAGE}
+# postfix/pickup
+POSTFIX_LOGLINE_PICKUP %{POSTFIX_SUBPROCESS_PICKUP:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?(?:%{POSTFIX_QUEUEID:[postfix][queue_id]}: uid=%{UINT:[postfix][uid]:int} from=<(?:%{USERNAME:[postfix][from][name]}|%{POSTFIX_EMAIL_ADDRESS_FROM:[postfix][from][name]}|%{POSTFIX_VALUE:[postfix][from][name]})>)|%{POSTFIX_MESSAGE}
+# postfix/bounce
+POSTFIX_LOGLINE_BOUNCE %{POSTFIX_SUBPROCESS_BOUNCE:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?%{POSTFIX_QUEUEID:[postfix][queue_id]}: sender non-delivery notification: %{POSTFIX_QUEUEID:[postfix][bounce_id]}
+# postfix/smtpd
+POSTFIX_LOGLINE_SMTPD %{POSTFIX_SUBPROCESS_SMTPD:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?(?:%{POSTFIX_SMTPD_CONNECTS}|%{POSTFIX_SMTPD_ACTIONS}|%{POSTFIX_SMTPD_LOGIN}|%{POSTFIX_SMTPD_ERRORAFTERCOMMAND}|%{POSTFIX_SMTPD_ERRORINCOMMAND}|%{POSTFIX_MESSAGE})
+# postfix/smtp
+# postfix/local
+# postfix/pipe
+POSTFIX_LOGLINE_OUT %{POSTFIX_SUBPROCESS_OUT:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?(?:%{POSTFIX_OUT_RELAY}|%{POSTFIX_OUT_CONNECT}|%{POSTFIX_OUT_5XX}|%{POSTFIX_OUT_REFUSAL}|%{POSTFIX_OUT_LOSTCONNECTION}|%{POSTFIX_OUT_TIMEOUT}|%{POSTFIX_OUT_SAID}|%{POSTFIX_MESSAGE})
+# postfix/error
+POSTFIX_LOGLINE_ERROR %{POSTFIX_SUBPROCESS_ERROR:[postfix][subprocess]}%{POSIX_PID}: (?:%{LOGLEVEL:[postfix][severity]}: )?%{POSTFIX_OUT_RELAY}
+# Autres sous-processus et logs génériques
+POSTFIX_LOGLINE_OTHER %{POSTFIX_SUBPROCESS_OTHER:[postfix][subprocess]}%{POSIX_PID}: %{GREEDYDATA:[postfix][message]}
+
+# Point d'entrée
+POSTFIX_PROCESS postfix
+POSTFIX_SUBPROCESS_ERROR error
+POSTFIX_SUBPROCESS_SMTPD smtpd
+POSTFIX_SUBPROCESS_OUT smtp|lmtp|local|pipe
+POSTFIX_SUBPROCESS_QMGR qmgr
+POSTFIX_SUBPROCESS_CLEANUP cleanup
+POSTFIX_SUBPROCESS_PICKUP pickup
+POSTFIX_SUBPROCESS_BOUNCE bounce
+POSTFIX_SUBPROCESS_OTHER [a-zA-Z0-9]+
+POSTFIX_INSTANCE [a-zA-Z0-9]+
+POSTFIX %{POSTFIX_PROCESS:[process][name]}(?:-%{POSTFIX_INSTANCE:[postfix][instance]})?/(?:%{POSTFIX_LOGLINE_ERROR}|%{POSTFIX_LOGLINE_SMTPD}|%{POSTFIX_LOGLINE_OUT}|%{POSTFIX_LOGLINE_QMGR}|%{POSTFIX_LOGLINE_CLEANUP}|%{POSTFIX_LOGLINE_PICKUP}|%{POSTFIX_LOGLINE_BOUNCE}|%{POSTFIX_LOGLINE_OTHER})
+
+SENDMAILQUEUEID (?:[A-Za-z0-9]+|NOQUEUE)
+SENDMAILEMAILADDRESSPART [a-zA-Z0-9_.+-=:]+
+SENDMAILEMAILADDRESS (?:(%{SENDMAILEMAILADDRESSPART:[sendmail][local]})?(@%{SENDMAILEMAILADDRESSPART:[sendmail][remote]})?)
+SENDMAILRELAYTO (?:\[?%{DATA:[sendmail][relayhost]}\]?(?: \[%{IP:[sendmail][relayip]}\])?)
+SENDMAILRELAYFROM (?:%{DATA:[sendmail][relayhost]})
+SENDMAILDELAY %{POSREAL:[sendmail][delay-a]}:%{POSREAL:[sendmail][delay-b]}:%{POSREAL:[sendmail][delay-c]}
+SENDMAILXDELAY %{POSREAL:[sendmail][xdelay-a]}:%{POSREAL:[sendmail][xdelay-b]}:%{POSREAL:[sendmail][xdelay-c]}
+SENDMAILDSN %{NONNEGINT}\.%{NONNEGINT}\.%{NONNEGINT}
+SENDMAILMESSAGEID (?:(%{SENDMAILEMAILADDRESSPART:[sendmail][messageid]}%)?%{SENDMAILEMAILADDRESS})
+SENDMAILSTATUS (?:[A-Za-z ]+)
+
+SENDMAIL_PROCESS sendmail
+SENDMAILSMTPTO %{SENDMAILQUEUEID:[sendmail][qid]}: to=<?%{SENDMAILEMAILADDRESS:[sendmail][to]}>?,(?:\sctladdr=<?%{SENDMAILEMAILADDRESS:[sendmail][ctladdr]}>?( \(%{NONNEGINT}/%{NONNEGINT}\))?,)? delay=%{SENDMAILDELAY}, xdelay=%{SENDMAILXDELAY}, mailer=%{DATA:[sendmail][mailer]}, pri=%{POSINT:[sendmail][pri]},( relay=%{SENDMAILRELAYTO},)? dsn=%{SENDMAILDSN:[sendmail][dsn]}, stat=%{SENDMAILSTATUS:[sendmail][status]}(:? \(?%{GREEDYDATA:[sendmail][reason]}\)?)?
+SENDMAILSMTPFROM %{SENDMAILQUEUEID:[sendmail][qid]}: from=<?%{SENDMAILEMAILADDRESS:[sendmail][from]}>?, size=%{NONNEGINT:[sendmail][size]}, class=%{NONNEGINT:[sendmail][class]}, nrcpts=%{NONNEGINT:[sendmail][nrcpts]}, msgid=<%{SENDMAILMESSAGEID:[sendmail][messageid]}>,( proto=%{DATA:[sendmail][proto]},)?( daemon=%{DATA:[sendmail][daemon]},)? relay=%{SENDMAILRELAYFROM}
+SENDMAILLOGLINE %{SENDMAIL_PROCESS:[process][name]}%{POSIX_PID}: (%{SENDMAILSMTPTO:message}|%{SENDMAILSMTPFROM:message})

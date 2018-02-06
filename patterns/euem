@@ -1,0 +1,8 @@
+####################################
+## End User Experience Management ##
+####################################
+
+EUEM_DATE %{YEAR}-%{MONTHNUM}-%{MONTHDAY}
+EUEM_TIME %{HOUR}:%{MINUTE}:%{SECOND},%{UINT}
+EUEM_LEVEL INFO
+EUEM \[EUEM\] %{EUEM_DATE} %{EUEM_TIME} %{EUEM_LEVEL}  - %{GREEDYDATA}

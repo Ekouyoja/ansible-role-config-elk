@@ -1,0 +1,7 @@
+####################
+## Agents de logs ##
+####################
+
+RSYSLOG_PROCESS rsyslogd
+RSYSLOG %{RSYSLOG_PROCESS:[process][name]}: %{RSYSLOG_MARK}
+RSYSLOG_MARK -- MARK --

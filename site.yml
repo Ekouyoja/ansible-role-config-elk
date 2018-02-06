@@ -1,0 +1,7 @@
+---
+- name: Install du role config-elk
+  hosts: all
+  become: true
+  remote_user: root
+  roles: 
+     - config-elk

@@ -1,0 +1,50 @@
+############
+## Auditd ##
+############
+
+AUDITD_TIMESTAMP %{UINT}\.%{UINT}
+AUDITD_QUOTED_VALUE [^"]*
+
+# Champ msg dans le header
+AUDITD_HEADER_MSG msg=audit\(%{AUDITD_TIMESTAMP:[auditd][timestamp]}:%{UINT:[auditd][id]:int}\)
+
+# Types d'enregistrements
+AUDITD_TYPE_LOGIN LOGIN
+AUDITD_TYPE_CONFIG_CHANGE CONFIG_CHANGE
+AUDITD_TYPE_GENERIC %{NOTSPACE}
+
+# Couples clé-valeur dans la 2ème entête
+AUDITD_FIELD_PID pid=%{UINT:[auditd][pid]:int}
+AUDITD_FIELD_UID uid=%{UINT:[auditd][uid]:int}
+AUDITD_FIELD_AUID auid=%{UINT:[auditd][auid]:int}
+AUDITD_FIELD_SES ses=%{UINT:[auditd][ses]:int}
+AUDITD_FIELD_BACKLOG audit_backlog_limit=%{UINT:[auditd][backlog_limit]:int}
+AUDITD_FIELD_OLD old=%{UINT:[auditd][old]:int}
+AUDITD_FIELD_RES res=%{UINT:[auditd][res]:int}
+AUDITD_FIELD_MSG msg='%{AUDITD_MSG}'
+
+# Groupes de couples clé-valeur précédés d'un "tag" dans la 2ème entête
+AUDITD_ITEM_USER user %{AUDITD_FIELD_PID} %{AUDITD_FIELD_UID} %{AUDITD_FIELD_AUID} %{AUDITD_FIELD_SES}
+AUDITD_ITEM_OLD_SES old ses=%{UINT:[auditd][ses_old]:int}
+AUDITD_ITEM_NEW_SES new ses=%{UINT:[auditd][ses_new]:int}
+AUDITD_ITEM_OLD_AUID old auid=%{UINT:[auditd][auid_old]:int}
+AUDITD_ITEM_NEW_AUID new auid=%{UINT:[auditd][auid_new]:int}
+
+# Message contenant des couples clé-valeur (ceux-ci dépendent peut être du type de l'enregistrement)
+AUDITD_MSG %{AUDITD_MSG_FIELD}(?:[ ]+%{AUDITD_MSG_FIELD})*
+AUDITD_MSG_FIELD acct=(?:\?|"%{AUDITD_QUOTED_VALUE:[auditd][msg][acct]}")|exe=(?:\?|"%{AUDITD_QUOTED_VALUE:[auditd][msg][exe]}")|hostname=(?:\?|%{NOTSPACE:[auditd][msg][hostname]})|addr=(?:\?|%{IP:[auditd][msg][addr]})|id=(?:\?|%{UINT:[auditd][msg][id]:int})|algo=(?:\?|%{NOTSPACE:[auditd][msg][algo]})|cipher=(?:\?|%{NOTSPACE:[auditd][msg][cipher]})|direction=(?:\?|%{NOTSPACE:[auditd][msg][direction]})|fp=(?:\?|%{NOTSPACE:[auditd][msg][fp]})|kind=(?:\?|%{NOTSPACE:[auditd][msg][kind]})|ksize=(?:\?|%{UINT:[auditd][msg][ksize]:int})|laddr=(?:\?|%{IP:[auditd][msg][laddr]})|lport=(?:\?|%{UINT:[auditd][msg][lport]:int})|op=(?:\?|%{NOTSPACE:[auditd][msg][op]})|res=(?:\?|%{NOTSPACE:[auditd][msg][res]})|rport=(?:\?|%{UINT:[auditd][msg][rport]:int})|size=(?:\?|%{UINT:[auditd][msg][size]:int})|spid=(?:\?|%{UINT:[auditd][msg][spid]:int})|suid=(?:\?|%{UINT:[auditd][msg][suid]:int})|terminal=(?:\?|%{NOTSPACE:[auditd][msg][terminal]})
+
+# Formats spécifiques à un type d'enregistrement
+AUDITD_LINE_LOGIN %{AUDITD_TYPE_LOGIN:[auditd][type]} %{AUDITD_HEADER_MSG}: %{AUDITD_FIELD_PID} %{AUDITD_FIELD_UID} %{AUDITD_ITEM_OLD_AUID} %{AUDITD_ITEM_NEW_AUID} %{AUDITD_ITEM_OLD_SES} %{AUDITD_ITEM_NEW_SES}
+AUDITD_LINE_CONFIG_CHANGE %{AUDITD_TYPE_CONFIG_CHANGE:[auditd][type]} %{AUDITD_HEADER_MSG}: %{AUDITD_FIELD_BACKLOG} %{AUDITD_FIELD_OLD} %{AUDITD_FIELD_AUID} %{AUDITD_FIELD_SES} %{AUDITD_FIELD_RES}
+# Formats concernant les utilisateurs (regroupés comme ils possèdent la même entête)
+AUDITD_LINE_USER_GENERIC %{AUDITD_TYPE_GENERIC:[auditd][type]} %{AUDITD_HEADER_MSG}: %{AUDITD_ITEM_USER} %{AUDITD_FIELD_MSG}
+# Autres formats
+# TODO à implémenter au fur et à mesure (ou se trouve la documentation du format ?????)
+AUDITD_LINE_OTHER %{AUDITD_TYPE_GENERIC:[auditd][type]} %{AUDITD_HEADER_MSG}: %{GREEDYDATA:[auditd][message]}
+
+# Point d'entrée
+#TODO : ajouter le format des logs du process "auditd" (démarrage, arrêt etc...)
+AUDITD_PROCESS audispd
+AUDITD %{AUDITD_PROCESS:[process][name]}: node=%{NOTSPACE:[auditd][node]} type=(?:%{AUDITD_LINE_LOGIN}|%{AUDITD_LINE_CONFIG_CHANGE}|%{AUDITD_LINE_USER_GENERIC}|%{AUDITD_LINE_OTHER})
+

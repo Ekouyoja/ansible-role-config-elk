@@ -1,0 +1,12 @@
+######################################
+## Répartiteurs de charge F5 BIG-IP ##
+######################################
+
+BIGIP_AUTH [a-zA-Z0-9_@.-]+
+BIGIP_DUMMY default send string
+BIGIP_PROCESS netlb
+BIGIP_SYSLOG %{BIGIP_PROCESS:[process][name]}: (?:%{BIGIP_ACCESS}|%{BIGIP_REQUEST_FORMAT1}|%{BIGIP_REQUEST_FORMAT2})s
+BIGIP_REQUEST_FORMAT1 \[%{HTTPDATE:[netlb][date]}\] "(?:%{IP:[netlb][remotehost]})?" "(?:%{IP:[netlb][srvip]})?" "(?:%{IP:[netlb][forwarded_by]})?" "(?:%{IP:[netlb][vip]})?" "(?:%{UINT:[netlb][response]:int})?" "(?:%{UINT:[netlb][bytes]:int})?" "(?:%{UINT:[netlb][duration]:int})?" "(?:%{APACHE_QUOTED:[netlb][bigip_cached]})?" "(?:%{APACHE_METHOD:[netlb][method]} %{NOTSPACE:[netlb][request]}(?: %{APACHE_HTTPVERSION:[netlb][httpversion]})?)?" "(?:%{APACHE_QUOTED:[netlb][referer]})?" "(?:%{APACHE_QUOTED:[netlb][useragent]})?" "(?:%{APACHE_QUOTED:[netlb][cookie]})?"
+BIGIP_REQUEST_FORMAT2 \[%{NOTSPACE:[netlb][type]}\]\[%{HTTPDATE:[netlb][date]}\] %{IPORHOST:[netlb][remotehost]} TLSv%{NUMBER:[netlb][tlsversion]} %{NOTSPACE:[netlb][encryption]} "(-|%{NOTSPACE:[netlb][request]})" (?:-|%{UINT:[netlb][bytes]})
+BIGIP_ACCESS \[%{NOTSPACE:[netlb][type]}\] %{IPORHOST:[netlb][remotehost]} (?:-|%{USER:[netlb][remotelogname]}) (?:-|%{BIGIP_AUTH:[netlb][remoteuser]}) \[%{HTTPDATE:[netlb][date]}\] "(-|%{NOTSPACE:[netlb][request]})" %{UINT:[netlb][response]} (?:-|%{UINT:[netlb][bytes]})
+BIGIP %{BIGIP_DUMMY}|%{BIGIP_SYSLOG}

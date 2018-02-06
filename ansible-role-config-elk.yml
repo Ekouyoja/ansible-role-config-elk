@@ -1,0 +1,39 @@
+# Playbook install logstash avec les bonnes instances
+sudo ansible-playbook /etc/ansible/create_role_logstash.yml
+config-elk
+
+cat <<-'EOF' >/etc/ansible/roles/config-elk/vars/main.yml
+---
+
+EOF
+
+cat <<-'EOF' >/etc/ansible/roles/config-elk/tasks/main.yml
+---
+#- name: "On vérifie que la stack ELK est installé A FAIRE quand conf OK"
+
+- import_tasks: logstash-patterns.yml
+  tags: [ 'logstash' ]
+- import_tasks: logstash-instances.yml
+  tags: [ 'logstash' ]
+
+EOF
+
+cat <<-'EOF' >/etc/ansible/roles/config-elk/hosts
+[default]
+#exemple.crpc.fr
+
+EOF
+
+cat <<-'EOF' >/etc/ansible/roles/config-elk/site.yml
+---
+- name: Install du role config-elk
+  hosts: all
+  become: true
+  remote_user: root
+  roles: 
+     - config-elk
+
+EOF
+
+export ANSIBLE_HOST_KEY_CHECKING=FALSE
+ansible-playbook /etc/ansible/roles/config-elk/site.yml -i /etc/ansible/roles/config-elk/hosts --limit 172.26.56.73 --ask-pass

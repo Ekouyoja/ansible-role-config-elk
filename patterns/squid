@@ -1,0 +1,5 @@
+SQUID %{NUMBER:[squid][time]}\s+%{NUMBER:[squid][duration]} %{IP:[squid][remotehost]} %{WORD:[squid][status]}/%{UINT:[squid][response]:int} %{UINT:[squid][bytes]:int} %{WORD:[squid][method]} (%{URIPROTO:[squid][scheme]}://)?%{IPORHOST:[squid][destname]}(:%{POSINT:[squid][destport]})?%{NOTSPACE:[squid][urlpath]}? (-|%{DATA:[squid][remoteuser]}) %{WORD:[squid][route]}/(-|%{IPORHOST:[squid][xforwarded]}) (-|%{GREEDYDATA:[squid][content_type]})
+
+SQUID_PROCESS squid
+
+SQUIDLOGLINE %{SQUID_PROCESS:[process][name]}: %{SQUID}

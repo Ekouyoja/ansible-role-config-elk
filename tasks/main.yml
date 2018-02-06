@@ -1,0 +1,7 @@
+---
+#- name: "On vérifie que la stack ELK est installé A FAIRE quand conf OK"
+
+- import_tasks: logstash-patterns.yml
+  tags: [ 'logstash' ]
+- import_tasks: logstash-instances.yml
+  tags: [ 'logstash' ]

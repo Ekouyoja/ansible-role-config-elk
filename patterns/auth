@@ -1,0 +1,45 @@
+#################################################
+## Authentification : su, sudo, pam, wallix... ##
+#################################################
+
+SU_PROCESS su
+SU %{SU_PROCESS:[process][name]}: %{PAM}
+
+# jrenard : TTY=pts/0 ; PWD=/export/home/jrenard ; USER=root ; COMMAND=/bin/su -
+# db2itr18 : user NOT in sudoers ; TTY=pts/1 ; PWD=/db2data/db2itr18 ; USER=root ; COMMAND=/bin/su - db2itamp
+SUDO_PROCESS sudo
+SUDO %{SUDO_PROCESS:[process][name]}:%{SPACE}%{USER:[sudo][userfrom]} : (?:%{GREEDYDATA:[sudo][message]} ; )?TTY=%{NOTSPACE:[sudo][tty]} ; PWD=%{GREEDYDATA:[sudo][pwd]} ; USER=%{USER:[sudo][userchange]} ; COMMAND=%{GREEDYDATA:[sudo][command]}
+
+PAM_FILE [\w_%!$@:.,+~-]+
+PAM_STATE failure|success|opened|closed|denied
+PAM_HEADER %{PAM_FILE:[pam][module]}\(%{PAM_FILE:[pam][program]}:%{PAM_FILE:[pam][service]}\)
+PAM_AUTH (?:PAM %{UINT:[pam][attempts]:int} more )?authentication %{PAM_STATE:[pam][state]}; logname=(?:%{NOTSPACE:[pam][logname]})? uid=%{UINT:[pam][uid]:int} euid=%{UINT:[pam][euid]:int} tty=%{NOTSPACE:[pam][tty]} ruser=(?:%{NOTSPACE:[pam][remote][user]})? rhost=%{IPORHOST:[pam][remote][host]}(?:  user=%{USER:[pam][user]})?
+PAM_ACCESS Access %{PAM_STATE:[pam][state]} for user %{USER:[pam][user]}: %{UINT:[pam][code]:int} \(%{GREEDYDATA:[pam][message]}\)
+PAM_SESSION session %{PAM_STATE:[pam][state]} for user %{USER:[pam][user]}( by (LOGIN)?\(uid=%{UINT:[pam][uid]:int}\))?
+PAM_UNKNOWNUSER check pass; user %{USER:[pam][user]}
+PAM_RECEIVED received for user %{USER:[pam][user]}: %{UINT:[pam][code]:int} \(%{GREEDYDATA:[pam][message]}\)
+PAM_FAILEDUSERINFO error retrieving information about user %{USER:[pam][user]}
+PAM_LOGLINE %{PAM_ACCESS}|%{PAM_AUTH}|%{PAM_SESSION}|%{PAM_UNKNOWNUSER}|%{PAM_RECEIVED}|%{PAM_FAILEDUSERINFO}
+PAM %{PAM_HEADER}: %{PAM_LOGLINE:[pam][message]}
+
+##########
+## SSHD ##
+##########
+
+# Exemples :
+# Invalid user bidule from 172.29.1.42
+# Connection closed by 172.29.46.69
+# Failed password for invalid user bidule from 172.29.1.42 port 35742 ssh2
+# Failed password for root from 172.30.146.57 port 2134 ssh2
+# Accepted keyboard-interactive/pam for root from 172.30.92.46 port 49970 ssh2
+# Postponed publickey for weblogic from ::ffff:127.0.0.1 port 55288 ssh2
+# Received disconnect from ::ffff:172.31.130.123: 13: Unable to authenticate
+SSHD_ACCEPTED Accepted %{NOTSPACE:[ssh][authtype]} for %{USER:[ssh][user]} from (?:\:\:ffff\:|)?%{IP:[ssh][remote][host]} port %{UINT:[ssh][remote][port]:int} %{WORD:[ssh][version]}
+SSHD_RECEIVED Received %{NOTSPACE:[ssh][state]} from (?:\:\:ffff\:|)%{IP:[ssh][remote][host]}: %{UINT:[ssh][code]:int}:
+SSHD_INVALIDUSER Invalid user %{USER:[ssh][user]} from (?:\:\:ffff\:|)?%{IP:[ssh][remote][host]}
+SSHD_CONNECTION Connection %{NOTSPACE:[ssh][state]} by (?:\:\:ffff\:|)?(?:%{IP:[ssh][remote][host]}|UNKNOWN)
+SSHD_FAILEDPASSWORD Failed password for (invalid user )?%{USER:[ssh][user]} from (?:\:\:ffff\:|)?%{IP:[ssh][remote][host]} port %{UINT:[ssh][remote][port]:int} %{WORD:[ssh][version]}
+SSHD_POSTPONEDPUBLICKEY Postponed publickey for %{USER:[ssh][user]} from (?:\:\:ffff\:|)?%{IP:[ssh][remote][host]} port %{UINT:[ssh][remote][port]:int} %{WORD:[ssh][version]}
+SSHD_LOGLINE %{SSHD_ACCEPTED}|%{SSHD_RECEIVED}|%{SSHD_INVALIDUSER}|%{SSHD_CONNECTION}|%{SSHD_FAILEDPASSWORD}|%{SSHD_POSTPONEDPUBLICKEY}
+SSHD_PROCESS sshd
+SSHD %{SSHD_PROCESS:[process][name]}%{POSIX_PID}: (?:%{SSHD_LOGLINE:[ssh][message]}|%{PAM})

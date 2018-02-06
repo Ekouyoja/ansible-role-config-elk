@@ -1,0 +1,16 @@
+SLAPDCONNECTION conn=%{INT:[slapd][conn]} ((op=%{INT:[slapd][op]})|(fd=%{INT:[slapd][fd]}))
+SLAPDTYPE (SEARCH RESULT)|[A-Z]+
+SLAPDBASE %{SLAPDCONNECTION} %{SLAPDTYPE:[slapd][type]}
+
+SLAPDACCEPT %{SLAPDBASE} from IP=%{IP:[slapd][srcip]}:%{NUMBER:[slapd][srcport]} \(IP=%{IP:[slapd][dstip]}:%{NUMBER:[slapd][dstport]}\)
+SLAPDCLOSED %{SLAPDCONNECTION} closed( \(connection lost\))?
+SLAPDCONNECTIONREAD connection_read\(%{INT:[slapd][fd]}\): no connection!
+
+SLAPDSRCHATTR %{SLAPDBASE} attr=%{GREEDYDATA:[slapd][attr]}
+SLAPDREQUEST %{SLAPDBASE} %{GREEDYDATA:[slapd][request]}
+
+SLAPDLOGLINE %{SLAPDSRCHATTR}|%{SLAPDACCEPT}|%{SLAPDCLOSED}|%{SLAPDCONNECTIONREAD}|%{SLAPDREQUEST}
+
+SLDAP_PROCESS slapd
+
+SLAPD %{SLDAP_PROCESS:[process][name]}%{POSIX_PID}: (%{SLAPDLOGLINE:message}|%{SLAPDBASE:message})

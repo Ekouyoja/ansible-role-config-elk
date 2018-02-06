@@ -1,0 +1,33 @@
+########################################################
+## Groks utilitaires et point d'entrée du grok unifié ##
+########################################################
+
+# Redéfinition de types
+UINT [0-9]+
+WORDINT [A-Za-z0-9]+
+WORDINTDOT [A-Za-z0-9.]+
+POSREAL [0-9]+(.[0-9]+)?
+
+# Syslog
+LOGLEVEL ([T|t]race|TRACE|[D|d]ebug|DEBUG|[N|n]otice|NOTICE|[E|e]vent|EVENT|[I|i]nfo|INFO|[W|w]arn?(?:ing)?|WARN?(?:ING)?|[E|e]rr?(?:or)?|ERR?(?:OR)?|[C|c]rit?(?:ical)?|CRIT?(?:ICAL)?|[A|a]lert|ALERT|[F|f]atal|FATAL|[S|s]evere|SEVERE|[E|e]merg(?:ency)?|EMERG(?:ENCY)?)
+POSIX_PID \[%{UINT:[process][id]:int}\]
+
+# Pour les logs sérialisés en JSON
+JSON_PAYLOAD \{%{GREEDYDATA}\}
+JSON %{JSON_PAYLOAD:[json][raw]}
+
+# Log générique avec un nom de processus
+# TODO : Pour éviter une ambiguité avec un nom de classe Java (première ligne d'une stacktrace), on n'autorise pas le point "." mais on autorise un chemin absolu (certains nom de processus sont des chemins : /mon/script.sh)
+PROG_DEFAULT (?:[^\d][\w_%-]+|%{PATH})
+PROG %{PROG_DEFAULT:[process][name]}
+PROG_GEN (?:\(%{PROG}\)|%{PROG})(?:\(%{DATA:[process][additional]}\))?(?:\[%{UINT:[process][id]:int}?\])?:?\s+(?:%{LOGLEVEL:[process][severity]}: )?%{GREEDYDATA:message}
+
+# Point d'entrée du grok unifié pour tous les messages en provenance des agents syslog
+SYSLOG_PRI <%{UINT:[syslog][pri]:int}>
+SYSLOG_LEGACY_DATE %{MONTH}  ?%{MONTHDAY} %{TIME}
+SYSLOG_MESSAGE %{APACHE}|%{POSTFIX}|%{CRON}|%{RSYNC}|%{SSHD}|%{SU}|%{KERNEL}|%{SLAPD}|%{SQUIDLOGLINE}|%{NETDOTLOGLINE}|%{SENDMAILLOGLINE}|%{PROG_GEN}
+SYSLOG_NORM (?:%{TIMESTAMP_ISO8601:[syslog][timestamp]}|%{SYSLOG_LEGACY_DATE:[syslog][timestamp_legacy]}) (?:%{HOSTNAME:[syslog][hostname]}|UNKNOWN_HOSTNAME) %{SYSLOG_MESSAGE}
+SYSLOG_ONLY_HOST %{HOSTNAME:[syslog][hostname]} %{EUEM}
+SYSLOG_ONLY_TIMESTAMP (?:%{TIMESTAMP_ISO8601:[syslog][timestamp]}|%{SYSLOG_LEGACY_DATE:[syslog][timestamp_legacy]}) (?:%{POSTFIX}|%{CRON}|%{RSYNC}|%{SSHD}|%{SU}|%{AUDITD}|%{PROG_GEN})
+SYSLOG %{SYSLOG_PRI}(?:%{CEF}|%{FORTIGATE}|%{SYSLOG_NORM}|%{SYSLOG_ONLY_HOST}|%{SYSLOG_ONLY_TIMESTAMP}|%{ATD}|%{SENDMAILLOGLINE}|%{PROG_GEN})
+GROK_UNI %{SYSLOG}|%{BIGIP}|%{JSON}
