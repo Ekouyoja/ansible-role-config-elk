@@ -7,3 +7,5 @@
   tags: [ 'logstash' ]
 - import_tasks: elastic-config.yml
   tags: [ 'elastic' ]
+- import_tasks: kibana-config.yml
+  tags: [ 'kibana' ]
