@@ -5,3 +5,5 @@
   tags: [ 'logstash' ]
 - import_tasks: logstash-instances.yml
   tags: [ 'logstash' ]
+- import_tasks: elastic-config.yml
+  tags: [ 'elastic' ]
