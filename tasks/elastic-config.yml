@@ -1,6 +1,6 @@
 - name: "Add new line elasticsearch.yml"
   lineinfile:
-    path: /etc/elasticsearch/elasticsearch;yml
+    path: /etc/elasticsearch/elasticsearch.yml
     insertafter: "{{ item.exp }}"
     line: "{{ item.line }}"
   with_items:
