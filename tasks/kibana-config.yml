@@ -1,0 +1,8 @@
+---
+- name: "Add new line kibana.yml"
+  lineinfile:
+    path: /etc/kibana/kibana.yml
+    insertafter: "{{ item.exp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { exp: '^#server.host*', line: 'server.host: \"{{ ansible_fqdn }}\"' }
